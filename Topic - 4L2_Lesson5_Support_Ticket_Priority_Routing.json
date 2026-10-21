@@ -1,0 +1,546 @@
+{
+  "name": "Topic - 4L2_Lesson5_Support_Ticket_Priority_Routing",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "support-ticket",
+        "options": {}
+      },
+      "id": "f6f84246-d19f-4707-ac25-f581ad98faab",
+      "name": "Webhook - Receive Support Ticket",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1296,
+        192
+      ],
+      "webhookId": "c57a5542-d625-4886-a8e7-216ec93d86b1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "77e1ade1-dc3a-4379-a33b-a77d2a6d981c",
+              "name": "customerName",
+              "value": "={{ ((($json.body || $json).name) || '').toString().trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "f0780e52-5f64-4937-ba8d-7f1e2778599e",
+              "name": "customerEmail",
+              "value": "={{ ((($json.body || $json).email) || '').toString().trim().toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "e9ebf3c6-0494-4baf-9a3e-d08ba8a7a086",
+              "name": "subject",
+              "value": "={{ ((($json.body || $json).subject) || '').toString().trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "332f0fce-71f7-4c61-9263-e93c7669b132",
+              "name": "originalPriority",
+              "value": "={{ ((($json.body || $json).priority) || '').toString().trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "4f177db6-3481-4593-af1e-7a107731ef07",
+              "name": "priority",
+              "value": "={{ ((($json.body || $json).priority) || '').toString().trim().toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "f1c2ee88-103a-4d5c-8ead-c011c5f84efe",
+              "name": "description",
+              "value": "={{ ((($json.body || $json).description) || '').toString().trim() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3965a209-a543-49e0-8c74-1ce4f1ce2e35",
+      "name": "Edit Fields - Normalize Ticket Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1136,
+        192
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e1cb0da6-cdf7-4cdf-87b6-449fd3183d90",
+              "leftValue": "={{ $json.customerName }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "5c72f854-05ce-4004-9c67-5b8a4652a67c",
+              "leftValue": "={{ $json.customerEmail }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "5bc39ef3-b5d1-4216-a0b8-b4111b2c1dfe",
+              "leftValue": "={{ $json.subject }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "92b862b0-76fe-4d1e-977a-ac5a6cae6baf",
+              "leftValue": "={{ $json.priority }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "50352016-af06-43f0-ac76-57fc6a51f08c",
+              "leftValue": "={{ $json.customerEmail }}",
+              "rightValue": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cf2056f4-9d18-487f-8bb6-c7c25cea3f5f",
+      "name": "If - Validate Required Fields",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -944,
+        192
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3057aca6-d0dc-4c05-be6d-d120264264c6",
+              "name": "status",
+              "value": "=rejected",
+              "type": "string"
+            },
+            {
+              "id": "e0374bce-4287-455a-986e-95f6fffec125",
+              "name": "rejectionReason",
+              "value": "={{ 'Missing or invalid: ' + [!$json.customerName ? 'name' : '', !$json.customerEmail ? 'email' : (/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test($json.customerEmail) ? '' : 'email (invalid format)'), !$json.subject ? 'subject' : '', !$json.priority ? 'priority' : ''].filter(Boolean).join(', ') }}",
+              "type": "string"
+            },
+            {
+              "id": "c388b7a9-3967-4272-ac76-916eebcd21c9",
+              "name": "receivedAt",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "983e1ef5-1834-42ac-9867-63b7a11b7328",
+      "name": "Edit Fields - Log Invalid Ticket",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -720,
+        592
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ff3fc892-acbf-45ac-aee9-3e57a9b17db2",
+              "name": "notificationSubject",
+              "value": "={{ $json.priority === 'urgent' ? '[URGENT ESCALATION] Support Ticket: ' + $json.subject : (['low','medium','high'].includes($json.priority) ? '[' + $json.priority.toUpperCase() + '] Support Ticket: ' + $json.subject : '[UNRECOGNIZED PRIORITY: ' + $json.originalPriority + '] Support Ticket: ' + $json.subject) }}",
+              "type": "string"
+            },
+            {
+              "id": "51865625-0e19-4836-b0c3-bc8373dd7dd3",
+              "name": "notificationBody",
+              "value": "={{ (['low','medium','high','urgent'].includes($json.priority) ? '' : 'MANUAL REVIEW REQUIRED - unrecognized priority value.\\n\\n') + ($json.priority === 'urgent' ? 'URGENT ESCALATION - immediate on-call attention required.\\n\\n' : '') + 'Customer: ' + $json.customerName + '\\nCustomer Email: ' + $json.customerEmail + '\\nPriority: ' + (['low','medium','high','urgent'].includes($json.priority) ? $json.priority.toUpperCase() : 'UNRECOGNIZED (' + $json.originalPriority + ')') + '\\nSubject: ' + $json.subject + '\\nIssue Description: ' + ($json.description || 'Not provided') }}",
+              "type": "string"
+            },
+            {
+              "id": "c5f51580-d992-497b-a307-b6b76cd8bad9",
+              "name": "routingTeam",
+              "value": "={{ ({low:'General Support', medium:'Tier 1 Support', high:'Tier 2 Support', urgent:'On-Call Escalation'})[$json.priority] || 'General Support Queue' }}",
+              "type": "string"
+            },
+            {
+              "id": "4f8d8603-efa2-400e-b565-48068aeedbbc",
+              "name": "destinationEmail",
+              "value": "={{ ({low:'general-support@example.com', medium:'tier1-support@example.com', high:'tier2-support@example.com', urgent:'oncall-escalation@example.com'})[$json.priority] || 'general-queue@example.com' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "ee79ecca-eca3-4373-9e31-2fae14011e4d",
+      "name": "Edit Fields - Build Notification Content",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -688,
+        192
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c80d1112-f433-4b7a-8acc-7c54d76e15f9",
+                    "leftValue": "={{ $json.priority }}",
+                    "rightValue": "low",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Low"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "b748cc2e-4bd6-4712-ae25-0b23a1181237",
+                    "leftValue": "={{ $json.priority }}",
+                    "rightValue": "medium",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Medium"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "b8e106d2-8ae7-495b-aa00-50dae5e3bacb",
+                    "leftValue": "={{ $json.priority }}",
+                    "rightValue": "high",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "High"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "1d7ad602-0501-43cd-ad5d-32734ce8e678",
+                    "leftValue": "={{ $json.priority }}",
+                    "rightValue": "urgent",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Urgent"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Fallback"
+        }
+      },
+      "id": "14780968-30eb-4272-b348-43c426dbe183",
+      "name": "Switch - Route by Priority",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -432,
+        192
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "fromEmail": "support-automation@example.com",
+        "toEmail": "={{ $json.destinationEmail }}",
+        "subject": "={{ $json.notificationSubject }}",
+        "emailFormat": "text",
+        "text": "={{ $json.notificationBody }}",
+        "options": {}
+      },
+      "id": "4ad5ecc0-7e95-4513-8ac0-5542fc512ade",
+      "name": "Email - General Support",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -144,
+        -112
+      ],
+      "webhookId": "fbe96345-c79b-4181-9c29-f97ea997c24a",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "fromEmail": "support-automation@example.com",
+        "toEmail": "={{ $json.destinationEmail }}",
+        "subject": "={{ $json.notificationSubject }}",
+        "emailFormat": "text",
+        "text": "={{ $json.notificationBody }}",
+        "options": {}
+      },
+      "id": "35ad99fc-7c1a-4cb0-9e9c-1c773b9f36bc",
+      "name": "Email - Tier 1 Support",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -144,
+        64
+      ],
+      "webhookId": "b1892ef2-ac73-4e9a-bdba-36534b4d3e0e"
+    },
+    {
+      "parameters": {
+        "fromEmail": "support-automation@example.com",
+        "toEmail": "={{ $json.destinationEmail }}",
+        "subject": "={{ $json.notificationSubject }}",
+        "emailFormat": "text",
+        "text": "={{ $json.notificationBody }}",
+        "options": {}
+      },
+      "id": "30ad9f47-1a18-4195-ab8b-de797695795b",
+      "name": "Email - Tier 2 Support",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -144,
+        240
+      ],
+      "webhookId": "d2969d46-af4f-4f66-8eff-1a51952f0510"
+    },
+    {
+      "parameters": {
+        "fromEmail": "support-automation@example.com",
+        "toEmail": "={{ $json.destinationEmail }}",
+        "subject": "={{ $json.notificationSubject }}",
+        "emailFormat": "text",
+        "text": "={{ $json.notificationBody }}",
+        "options": {}
+      },
+      "id": "77555845-6349-4c60-b03b-7ee3f2c24ac9",
+      "name": "Email - Urgent On-Call Escalation",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -144,
+        400
+      ],
+      "webhookId": "9aaf62f9-0236-4ddb-8ab9-9ef51b35e564"
+    },
+    {
+      "parameters": {
+        "fromEmail": "support-automation@example.com",
+        "toEmail": "={{ $json.destinationEmail }}",
+        "subject": "={{ $json.notificationSubject }}",
+        "emailFormat": "text",
+        "text": "={{ $json.notificationBody }}",
+        "options": {}
+      },
+      "id": "32b924fc-c2d7-4f2e-abef-48bf09719bbc",
+      "name": "Email - General Queue Fallback",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -144,
+        576
+      ],
+      "webhookId": "b72f74d9-9c64-423e-bc62-278751b041b9"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook - Receive Support Ticket": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields - Normalize Ticket Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields - Normalize Ticket Data": {
+      "main": [
+        [
+          {
+            "node": "If - Validate Required Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If - Validate Required Fields": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields - Build Notification Content",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields - Log Invalid Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields - Build Notification Content": {
+      "main": [
+        [
+          {
+            "node": "Switch - Route by Priority",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch - Route by Priority": {
+      "main": [
+        [
+          {
+            "node": "Email - General Support",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email - Tier 1 Support",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email - Tier 2 Support",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email - Urgent On-Call Escalation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email - General Queue Fallback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "dd143ed8-a251-46e0-8003-9fa8b7dcce6e",
+  "meta": {
+    "instanceId": "a03c7678428ef19ededbf912f16f7d5798ec7b9ab4c17f2a2def6a9e791e7215"
+  },
+  "nodeGroups": [],
+  "id": "gFdKO5RKo44asrcB",
+  "tags": []
+}
