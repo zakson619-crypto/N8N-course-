@@ -1,0 +1,204 @@
+{
+  "name": "Customer Signup Cleanser",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "f4ef671a-72ba-4c2f-8e4d-42dfaed6b347",
+      "name": "Manual_Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -176,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const leads = [\n  { id: 101, fullName: \"  Sarah Connor  \", email: \" SARAH.CONNOR@example.com \", phone: \"+1 (555) 123-4567\", status: \"New\" },\n  { id: 102, fullName: \"Sarah Connor\", email: \"sarah.connor@example.com\", phone: \"5551234567\", status: \"New\" },\n  { id: 103, fullName: \" Anna Lee \", email: \" ANNA.LEE@example.com \", phone: \"+1-555-222-3333\", status: \"New\" },\n  { id: 104, fullName: \"Anna Lee\", email: \"anna.lee@example.com\", phone: \"(555) 222-3333\", status: \"New\" },\n  { id: 105, fullName: \"John Smith\", email: \" JOHN.SMITH@example.com \", phone: \"+1 (555) 987-6543\", status: \"New\" },\n  { id: 106, fullName: \"\", email: \"missing.name@example.com\", phone: \"5551112222\", status: \"New\" },\n  { id: 107, fullName: \"Jane Doe\", email: \"\", phone: \"5553334444\", status: \"New\" }\n];\nreturn leads.map(lead => ({ json: lead }));"
+      },
+      "id": "83924119-9406-4ee2-b3ea-a58c0a958772",
+      "name": "Mock_Leads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        48,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a1a4c2b0-0001-4000-8000-000000000011",
+              "leftValue": "={{ $json.fullName }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "a1a4c2b0-0001-4000-8000-000000000012",
+              "leftValue": "={{ $json.email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "93f48dd9-35fb-4cb4-ad1b-e4d466c0b792",
+      "name": "Validate_Required_Fields",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        272,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  const lead = item.json;\n  const normalizedName = (lead.fullName ?? \"\").trim().replace(/\\s+/g, \" \");\n  const cleanedEmail = (lead.email ?? \"\").trim().toLowerCase();\n  const cleanedPhone = (lead.phone ?? \"\").replace(/\\D/g, \"\");\n  return {\n    json: {\n      ...lead,\n      normalizedName,\n      cleanedEmail,\n      cleanedPhone,\n      status: lead.status ?? \"New\"\n    }\n  };\n});"
+      },
+      "id": "f07ca489-6a56-4353-aba1-12d41553e678",
+      "name": "Clean_Standardize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "compare": "selectedFields",
+        "fieldsToCompare": "cleanedEmail",
+        "options": {}
+      },
+      "id": "b7e01e52-742c-4457-89ae-2c34e69d44d7",
+      "name": "Remove_Duplicates",
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        720,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  const lead = item.json;\n  return {\n    json: {\n      id: lead.id,\n      name: lead.normalizedName,\n      email: lead.cleanedEmail,\n      phone: lead.cleanedPhone,\n      status: lead.status,\n      originalEmail: lead.email\n    }\n  };\n});"
+      },
+      "id": "31004281-1f34-4d3d-a23c-bffb5ca0027a",
+      "name": "Map_Final_Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        944,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => ({\n  json: {\n    ...item.json,\n    rejectionReason: \"Missing fullName or email\",\n    processingStatus: \"Rejected\"\n  }\n}));"
+      },
+      "id": "46bd196a-b623-4ba5-b0ad-e3210e602553",
+      "name": "Rejected_Missing_Fields",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        400
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual_Trigger": {
+      "main": [
+        [
+          {
+            "node": "Mock_Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mock_Leads": {
+      "main": [
+        [
+          {
+            "node": "Validate_Required_Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate_Required_Fields": {
+      "main": [
+        [
+          {
+            "node": "Clean_Standardize",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Rejected_Missing_Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean_Standardize": {
+      "main": [
+        [
+          {
+            "node": "Remove_Duplicates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove_Duplicates": {
+      "main": [
+        [
+          {
+            "node": "Map_Final_Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "b0f7cf47-8aba-4fdc-8e8b-d2188f33f73d",
+  "meta": {
+    "instanceId": "a03c7678428ef19ededbf912f16f7d5798ec7b9ab4c17f2a2def6a9e791e7215"
+  },
+  "nodeGroups": [],
+  "id": "ankWI5RVtPpDwGmd",
+  "tags": []
+}
